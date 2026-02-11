@@ -1,28 +1,34 @@
 const express = require("express");
+const connectDB = require("./config/database");
 const app = express();
+const User = require("./models/user");
 
-// the order of this middleware matters, we should define it after all routes not in the start.
-app.use("/", (err, req, res, next) => {
-  if (err) {
-    res.status(500).send("Internal Server Error");
-  }
-});
+app.post("/signup", async (req, res) => {
+  const user = new User({
+    firstName: "Sandeep",
+    lastName: "Sah",
+    emailId: "sandeep.sah@example.com",
+    password: "securepassword",
+    age: 29,
+    gender: "Male",
+  });
 
-app.get("/user", (req, res) => {
+  // const user = new User(userObj);
   try {
-    throw new Error("Simulated server error");
-    res.send("User route accessed successfully");
+    await user.save();
+    res.status(201).send("User signed up successfully");
   } catch (err) {
-    res.status(500).send("Try catch Error");
+    res.status(500).send("Error signing up user: " + err.message);
   }
 });
 
-app.use("/", (err, req, res, next) => {
-  if (err) {
-    res.status(500).send("Internal Server Error");
-  }
-});
-
-app.listen(3000, () => {
-  console.log("Server is running on port 3000");
-});
+connectDB()
+  .then(() => {
+    console.log("Database connected successfully");
+    app.listen(7777, () => {
+      console.log("Server is running on port 7777");
+    });
+  })
+  .catch((err) => {
+    console.error("Database connection error:", err);
+  });
