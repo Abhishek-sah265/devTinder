@@ -78,7 +78,11 @@ app.patch("/user", async (req,res) => {
   const userId = req.body.id;
   const updateData = req.body;
   try {
-    const user = await User.findByIdAndUpdate(userId, updateData);
+    const user = await User.findByIdAndUpdate(userId, updateData, {
+      runValidators: true, // this will run the validators defined in the user schema while updating the user, for example if we try to update the age of the user to 10 then it will throw an error because the minimum age defined in the user schema is 16.
+      new: true, // this will return the updated user instead of the old one
+      // returnDocument: "after", // this is an alternative to new: true, it will return the updated user instead of the old one, but it is only available in mongoose version 6.0 and above
+    });
     if (!user) {
       return res.status(404).send("User not found");
     } else {
