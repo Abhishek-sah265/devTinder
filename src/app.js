@@ -74,14 +74,27 @@ app.delete("/user", async (req, res) => {
   }
 });
 
-app.patch("/user", async (req,res) => {
-  const userId = req.body.id;
+app.patch("/user/:id", async (req,res) => {
+  const userId = req.params?.id;
+  // const userId = req.body.id; // this is for getting the userId from the request body, we can use either params or body to get the userId, but it is a good practice to use params for getting the id of the resource we want to update or delete and use body for getting the data we want to update.
   const updateData = req.body;
+
   try {
+
+    const ALLOWED_UPDATES = ["firstName", "lastName", "password", "age", "gender", "photoUrl", "about", "skills"];
+    const updates = Object.keys(updateData);
+    const isValidOperation = updates.every((update) => ALLOWED_UPDATES.includes(update));
+
+    if (!isValidOperation) {
+      return res.status(400).send("Invalid updates!");
+    }
+    // console.log("updateData: ", updateData.skills);
+    // if(updateData.skills && updateData.skills.length > 5){
+    //   return res.status(400).send("Maximum 5 skills allowed!");
+    // }
     const user = await User.findByIdAndUpdate(userId, updateData, {
       runValidators: true, // this will run the validators defined in the user schema while updating the user, for example if we try to update the age of the user to 10 then it will throw an error because the minimum age defined in the user schema is 16.
-      new: true, // this will return the updated user instead of the old one
-      // returnDocument: "after", // this is an alternative to new: true, it will return the updated user instead of the old one, but it is only available in mongoose version 6.0 and above
+      returnDocument: "after", // this is an alternative to new: true, it will return the updated user instead of the old one, but it is only available in mongoose version 6.0 and above
     });
     if (!user) {
       return res.status(404).send("User not found");
