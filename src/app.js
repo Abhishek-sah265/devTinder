@@ -60,6 +60,51 @@ app.get("/userById", async (req, res) => {
   }
 });
 
+app.delete("/user", async (req, res) => {
+  const userId = req.body.id;
+  try {
+    const user = await User.findByIdAndDelete(userId);  
+    if (!user) {
+      return res.status(404).send("User not found");
+    } else {
+      res.send("User deleted successfully");
+    }
+  } catch (err) {
+    res.status(400).send("something went wrong: " + err.message);
+  }
+});
+
+app.patch("/user", async (req,res) => {
+  const userId = req.body.id;
+  const updateData = req.body;
+  try {
+    const user = await User.findByIdAndUpdate(userId, updateData);
+    if (!user) {
+      return res.status(404).send("User not found");
+    } else {
+      res.send(user);
+    }
+  } catch (err) {
+    res.status(400).send("something went wrong: " + err.message);
+  }
+});
+
+app.patch("/userByEmail", async (req,res) => {
+  const userEmail = req.body.emailId;
+  const updateData = req.body;
+  try {
+    const user = await User.findOneAndUpdate({ emailId: userEmail }, updateData);
+    if (!user) {
+      return res.status(404).send("User not found");  
+    } else {
+      res.send(user);
+    } 
+  } catch (err) {
+    res.status(400).send("something went wrong: " + err.message);
+  }
+});
+
+
 connectDB()
   .then(() => {
     console.log("Database connected successfully");
