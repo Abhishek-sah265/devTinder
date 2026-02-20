@@ -31,6 +31,25 @@ app.post("/signup", async (req, res) => {
   }
 });
 
+app.post("/login", async (req, res) => {
+  const { emailId, password } = req.body; 
+  try {
+    const user = await User.findOne({ emailId });
+    if (!user) {  
+      return res.status(404).send("User not found");
+    }
+
+    const isPasswordValid = await bcypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      return res.status(401).send("Invalid password");
+    }
+
+    res.send("User logged in successfully");
+  } catch (err) {
+    res.status(500).send("Error logging in user: " + err.message);
+  }
+});
+
 //get user by email
 app.get("/user", async (req, res) => {
   const userEmail = req.body.emailId;
