@@ -9,7 +9,9 @@ app.post("/signup", async (req, res) => {
   const user = new User(req.body);
   // const user = new User(userObj);
   try {
-    await user.save();
+    await user.save({
+      runValidators: true, // this will run the validators defined in the user schema while saving the user, for example if we try to save a user with an invalid email then it will throw an error because of the validate function defined in the user schema.
+    });
     res.status(201).send("User signed up successfully");
   } catch (err) {
     res.status(500).send("Error signing up user: " + err.message);
@@ -88,10 +90,7 @@ app.patch("/user/:id", async (req,res) => {
     if (!isValidOperation) {
       return res.status(400).send("Invalid updates!");
     }
-    // console.log("updateData: ", updateData.skills);
-    // if(updateData.skills && updateData.skills.length > 5){
-    //   return res.status(400).send("Maximum 5 skills allowed!");
-    // }
+
     const user = await User.findByIdAndUpdate(userId, updateData, {
       runValidators: true, // this will run the validators defined in the user schema while updating the user, for example if we try to update the age of the user to 10 then it will throw an error because the minimum age defined in the user schema is 16.
       returnDocument: "after", // this is an alternative to new: true, it will return the updated user instead of the old one, but it is only available in mongoose version 6.0 and above
