@@ -1,17 +1,30 @@
 const express = require("express");
+const bcypt = require("bcrypt");
 const connectDB = require("./config/database");
-const app = express();
 const User = require("./models/user");
+const { validateSignupData } = require("./utils/validation");
 
+const app = express();
 app.use(express.json());
 
 app.post("/signup", async (req, res) => {
-  const user = new User(req.body);
-  // const user = new User(userObj);
   try {
-    await user.save({
-      runValidators: true, // this will run the validators defined in the user schema while saving the user, for example if we try to save a user with an invalid email then it will throw an error because of the validate function defined in the user schema.
+    // validation of data can be done in two ways, one is to define the validate function in the user schema and the other is to create a separate validation function in a utils folder and call that function in the route handler, both ways are correct but it is a good practice to keep the validation logic separate from the route handlers, so that the code is more organized and easier to maintain.
+    validateSignupData(req);
+
+    // Encrypt the password
+    const {firstName, lastName, emailId, password} = req.body;
+    const hashedPassword = await bcypt.hash(password, 10);
+
+    // creating a new instance of the User model and saving it to the database
+    const user = new User({
+      firstName,
+      lastName,
+      emailId,
+      password: hashedPassword,
     });
+
+    await user.save();
     res.status(201).send("User signed up successfully");
   } catch (err) {
     res.status(500).send("Error signing up user: " + err.message);
