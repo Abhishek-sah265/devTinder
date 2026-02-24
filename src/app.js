@@ -1,11 +1,14 @@
 const express = require("express");
 const bcypt = require("bcrypt");
+const cookieParser = require("cookie-parser");
+const jwt = require("jsonwebtoken");
 const connectDB = require("./config/database");
 const User = require("./models/user");
 const { validateSignupData } = require("./utils/validation");
 
 const app = express();
 app.use(express.json());
+app.use(cookieParser());
 
 app.post("/signup", async (req, res) => {
   try {
@@ -13,7 +16,7 @@ app.post("/signup", async (req, res) => {
     validateSignupData(req);
 
     // Encrypt the password
-    const {firstName, lastName, emailId, password} = req.body;
+    const { firstName, lastName, emailId, password } = req.body;
     const hashedPassword = await bcypt.hash(password, 10);
 
     // creating a new instance of the User model and saving it to the database
@@ -32,22 +35,56 @@ app.post("/signup", async (req, res) => {
 });
 
 app.post("/login", async (req, res) => {
-  const { emailId, password } = req.body; 
+  const { emailId, password } = req.body;
   try {
     const user = await User.findOne({ emailId });
-    if (!user) {  
+    if (!user) {
       return res.status(404).send("User not found");
     }
 
     const isPasswordValid = await bcypt.compare(password, user.password);
-    if (!isPasswordValid) {
+    if (isPasswordValid) {
+
+      //create JWT token
+      const token = jwt.sign({ _id: user._id }, "DEV@TINDER$790");
+
+      // set the token in the cookie and send the response back to the user
+      res.cookie("token", token);
+      res.send("User logged in successfully");
+    } else {
       return res.status(401).send("Invalid password");
     }
-
-    res.send("User logged in successfully");
   } catch (err) {
     res.status(500).send("Error logging in user: " + err.message);
   }
+});
+
+app.get("/profile", async (req, res) => {
+
+  try {
+    const cookies = req.cookies;
+    const { token } = cookies;
+
+    if (!token) {
+      return res.status(401).send("Unauthorized: No token provided");
+    }
+    //validate the token and get the user data from the token, if the token is valid then we can send the user data back to the client, otherwise we can send an error message back to the client.
+    const decodedMessage = await jwt.verify(token, "DEV@TINDER$790");
+    const { _id } = decodedMessage;
+    console.log("Logged in user ID: " + _id);
+
+    const user = await User.findById(_id);
+    if (!user) {
+      return res.status(404).send("User not found");
+    } else {
+      res.send(user);
+    }
+    
+  } catch (err) {
+    return res.status(401).send("Unauthorized: Invalid token");
+  }
+
+
 });
 
 //get user by email
@@ -84,7 +121,7 @@ app.get("/userById", async (req, res) => {
   const userId = req.body.id;
   try {
     const user = await User.findById(userId);
-    if (!user) {  
+    if (!user) {
       return res.status(404).send("User not found");
     } else {
       res.send(user);
@@ -97,7 +134,7 @@ app.get("/userById", async (req, res) => {
 app.delete("/user", async (req, res) => {
   const userId = req.body.id;
   try {
-    const user = await User.findByIdAndDelete(userId);  
+    const user = await User.findByIdAndDelete(userId);
     if (!user) {
       return res.status(404).send("User not found");
     } else {
@@ -108,16 +145,26 @@ app.delete("/user", async (req, res) => {
   }
 });
 
-app.patch("/user/:id", async (req,res) => {
+app.patch("/user/:id", async (req, res) => {
   const userId = req.params?.id;
   // const userId = req.body.id; // this is for getting the userId from the request body, we can use either params or body to get the userId, but it is a good practice to use params for getting the id of the resource we want to update or delete and use body for getting the data we want to update.
   const updateData = req.body;
 
   try {
-
-    const ALLOWED_UPDATES = ["firstName", "lastName", "password", "age", "gender", "photoUrl", "about", "skills"];
+    const ALLOWED_UPDATES = [
+      "firstName",
+      "lastName",
+      "password",
+      "age",
+      "gender",
+      "photoUrl",
+      "about",
+      "skills",
+    ];
     const updates = Object.keys(updateData);
-    const isValidOperation = updates.every((update) => ALLOWED_UPDATES.includes(update));
+    const isValidOperation = updates.every((update) =>
+      ALLOWED_UPDATES.includes(update),
+    );
 
     if (!isValidOperation) {
       return res.status(400).send("Invalid updates!");
@@ -137,21 +184,23 @@ app.patch("/user/:id", async (req,res) => {
   }
 });
 
-app.patch("/userByEmail", async (req,res) => {
+app.patch("/userByEmail", async (req, res) => {
   const userEmail = req.body.emailId;
   const updateData = req.body;
   try {
-    const user = await User.findOneAndUpdate({ emailId: userEmail }, updateData);
+    const user = await User.findOneAndUpdate(
+      { emailId: userEmail },
+      updateData,
+    );
     if (!user) {
-      return res.status(404).send("User not found");  
+      return res.status(404).send("User not found");
     } else {
       res.send(user);
-    } 
+    }
   } catch (err) {
     res.status(400).send("something went wrong: " + err.message);
   }
 });
-
 
 connectDB()
   .then(() => {
