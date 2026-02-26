@@ -5,6 +5,7 @@ const jwt = require("jsonwebtoken");
 const connectDB = require("./config/database");
 const User = require("./models/user");
 const { validateSignupData } = require("./utils/validation");
+const { userAuth } = require("./middleware/auth");
 
 const app = express();
 app.use(express.json());
@@ -42,14 +43,22 @@ app.post("/login", async (req, res) => {
       return res.status(404).send("User not found");
     }
 
-    const isPasswordValid = await bcypt.compare(password, user.password);
-    if (isPasswordValid) {
+    const isPasswordValid = await user.validatePassword(password);
 
+    if (isPasswordValid) {
       //create JWT token
-      const token = jwt.sign({ _id: user._id }, "DEV@TINDER$790");
+      // const token = jwt.sign({ _id: user._id }, "DEV@TINDER$790", {
+      //   expiresIn: "7d",
+      // });
+
+      // create JWT token using the getJWT method defined in the user schema
+      const token = await user.getJWT();
 
       // set the token in the cookie and send the response back to the user
-      res.cookie("token", token);
+      res.cookie("token", token, {
+        httpOnly: true, // this will prevent the cookie from being accessed by the client-side JavaScript, which is a good security practice to prevent XSS attacks
+        expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // this will set the expiration time of the cookie to 7 days
+      });
       res.send("User logged in successfully");
     } else {
       return res.status(401).send("Invalid password");
@@ -59,32 +68,23 @@ app.post("/login", async (req, res) => {
   }
 });
 
-app.get("/profile", async (req, res) => {
-
+app.get("/profile", userAuth, async (req, res) => {
   try {
-    const cookies = req.cookies;
-    const { token } = cookies;
-
-    if (!token) {
-      return res.status(401).send("Unauthorized: No token provided");
-    }
-    //validate the token and get the user data from the token, if the token is valid then we can send the user data back to the client, otherwise we can send an error message back to the client.
-    const decodedMessage = await jwt.verify(token, "DEV@TINDER$790");
-    const { _id } = decodedMessage;
-    console.log("Logged in user ID: " + _id);
-
-    const user = await User.findById(_id);
-    if (!user) {
-      return res.status(404).send("User not found");
-    } else {
-      res.send(user);
-    }
-    
+    const user = req.user; // we can get the user data from the request object because we have attached the user data to the request object in the userAuth middleware
+    res.send(user);
   } catch (err) {
     return res.status(401).send("Unauthorized: Invalid token");
   }
+});
 
-
+app.post("/sendConnectionRequest", userAuth, async (req, res) => {
+  try {
+    const user = req.user;
+    // Logic to send connection request from senderId to recipientId
+    res.send("Connection request sent successfully by " + user.firstName + " " + user.lastName);
+  } catch (err) {
+    res.status(500).send("Error sending connection request: " + err.message);
+  } 
 });
 
 //get user by email

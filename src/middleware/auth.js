@@ -1,3 +1,5 @@
+const jwt = require("jsonwebtoken");
+const User = require("../models/user");
 
 const adminAuth = (req, res, next) => {
     console.log("Admin authentication middleware"); 
@@ -9,14 +11,25 @@ const adminAuth = (req, res, next) => {
     next();
 }
 
-const userAuth = (req, res, next) => {
-    console.log("User authentication middleware"); 
-    const token = "xyzuer"; // Example token, in real scenarios this would come from request headers or cookies
-    const isUserAuthenticated = token === "xyzuser"; // Simulated check
-    if (!isUserAuthenticated) {
-        return res.status(401).send("Unauthorized: User access required");
+const userAuth = async (req, res, next) => {
+   try{
+    const {token} = req.cookies;
+
+    if(!token){
+        return res.status(401).send("Token not valid!!");
     }
+    const decodedObj = await jwt.verify(token, "DEV@TINDER$790");
+    const {_id} = decodedObj;
+    const user = await User.findById(_id);
+
+    if(!user){
+        return res.status(404).send("User not found");
+    }
+    req.user = user; // Attach user data to the request object for use in subsequent middleware or route handlers
     next();
+   } catch(err){
+    return res.status(400).send("Error authenticating user: " + err.message);
+   }
 }
 
-module.exports = { adminAuth, userAuth };
+module.exports = { userAuth };
