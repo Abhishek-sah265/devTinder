@@ -46,6 +46,7 @@ const userSchema = new mongoose.Schema(
     gender: {
       type: String,
       enum: ["male", "female", "other"],
+      message: `{VALUE} is not supported`, // this message will be shown when the user tries to save a gender that is not in the enum array, but this validation will only work when we are creating a new user and not when we are updating an old user because by default the enum validation will only be called when we would create a new user but not in case of updating a old user.
       // by default the validate function and enum will only be called when we would create a new user but not in case of updating a old user.
       // validate(value) {
       //   if(!["male", "female", "other"].includes(value)) {
@@ -92,6 +93,7 @@ userSchema.methods.getJWT = async function () {
   return token;
 };
 
+// this can only be accessed on the instances of the user model and not on the user model itself because we are using function keyword and not arrow function because we want to use the this keyword to access the user data.
 userSchema.methods.validatePassword = async function (passwordInputByUser) {
   const user = this;
   const passwordHash = user.password;
