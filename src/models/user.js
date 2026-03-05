@@ -11,6 +11,7 @@ const userSchema = new mongoose.Schema(
       minLength: 3,
       maxLength: 50,
       trim: true,
+      index: true, //make search by firstname more efficient
     },
     lastName: {
       type: String,
@@ -21,7 +22,8 @@ const userSchema = new mongoose.Schema(
     emailId: {
       type: String,
       required: true,
-      unique: true,
+      unique: true, // mongo db automatically created index for unique equals to true.
+      // Indexes support efficient execution of queries in MongoDB 
       lowercase: true,
       trim: true,
       validate(value) {
@@ -45,8 +47,10 @@ const userSchema = new mongoose.Schema(
     },
     gender: {
       type: String,
-      enum: ["male", "female", "other"],
-      message: `{VALUE} is not supported`, // this message will be shown when the user tries to save a gender that is not in the enum array, but this validation will only work when we are creating a new user and not when we are updating an old user because by default the enum validation will only be called when we would create a new user but not in case of updating a old user.
+      enum: {
+        values: ["male", "female", "other"],
+        message: `{VALUE} is not supported`, // this message will be shown when the user tries to save a gender that is not in the enum array, but this validation will only work when we are creating a new user and not when we are updating an old user because by default the enum validation will only be called when we would create a new user but not in case of updating a old user.
+      },
       // by default the validate function and enum will only be called when we would create a new user but not in case of updating a old user.
       // validate(value) {
       //   if(!["male", "female", "other"].includes(value)) {
@@ -83,6 +87,11 @@ const userSchema = new mongoose.Schema(
     timestamps: true,
   },
 );
+
+//if we want to find a user by firstname and lastname and there are millions of user then the db will take a lot of time so, to make it faster we will create a compound index to make the query more efficient
+// User.find({firstName: "Abhishek", lastName: "sah"})
+// userSchema.index({firstName: 1}); // normal index
+userSchema.index({firstName: 1, lastName: 1}); // compound index
 
 userSchema.methods.getJWT = async function () {
   const user = this;
