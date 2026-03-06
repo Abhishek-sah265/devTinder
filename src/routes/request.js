@@ -9,6 +9,7 @@ requestRouter.post(
   userAuth,
   async (req, res) => {
     try {
+      const loggedInUser = req.user;
       const fromUserId = req.user._id;
       const toUserId = req.params.toUserId;
       const status = req.params.status;
@@ -21,7 +22,7 @@ requestRouter.post(
 
       const toUser = await User.findById(toUserId);
       if (!toUser) {
-        res.status(400).json({
+        return res.status(400).json({
           message: "User does not exist",
         });
       }
@@ -32,7 +33,7 @@ requestRouter.post(
       //   })
       // }
 
-      // when we have millions of user connection then this query will becomes more slow, 
+      // when we have millions of user connection then this query will becomes more slow,
       // so here we can introduce compound index.
       const existingConectionRequest = await ConnectionRequest.findOne({
         $or: [
@@ -40,9 +41,8 @@ requestRouter.post(
           { fromUserId: toUserId, toUserId: fromUserId },
         ],
       });
-
       if (existingConectionRequest) {
-        res.status(400).json({
+        return res.status(400).json({
           message: "Connection request already exist",
         });
       }
@@ -58,13 +58,53 @@ requestRouter.post(
       res.json({
         message:
           "Connection request sent successfully by " +
-          fromUserId.firstName +
+          loggedInUser.firstName +
           " " +
-          fromUserId.lastName,
+          loggedInUser.lastName,
         data,
       });
     } catch (err) {
       res.status(500).send("Error sending connection request: " + err.message);
+    }
+  },
+);
+
+requestRouter.post(
+  "/request/review/:status/:requestId",
+  userAuth,
+  async (req, res) => {
+    try {
+      const loggedInUser = req.user;
+      const allowedStatus = ["accepted", "rejected"];
+      const { status, requestId } = req.params;
+      if (!allowedStatus.includes(status)) {
+        return res.status(400).json({
+          message: "Not valid status",
+        });
+      }
+
+      const connectionRequest = await ConnectionRequest.findOne({
+        _id: requestId,
+        toUserId: loggedInUser._id,
+        status: "interested",
+      });
+
+      if (!connectionRequest) {
+        return res.status(404).json({
+          message: "Connection request not found or already reviewed",
+        });
+      }
+
+      connectionRequest.status = status;
+      const data = await connectionRequest.save();
+      res.json({
+        message: "Connection request " + status + " successfully",
+        data,
+      });
+    } catch (err) {
+      res
+        .status(400)
+        .send("Error reviewing connection request: " + err.message);
     }
   },
 );
