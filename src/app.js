@@ -9,11 +9,15 @@ app.use(cookieParser()); // cookieParser() = reads cookies from browser and conv
 const authRouter = require("./routes/auth");
 const profileRouter = require("./routes/profile"); 
 const requestRouter = require("./routes/request"); 
+const userRouter = require("./routes/user");
+
 
 //every route will be checked when we call an API
 app.use("/", authRouter);
 app.use("/", profileRouter);
 app.use("/", requestRouter);
+app.use("/", userRouter);
+
 
 
 connectDB()

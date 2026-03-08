@@ -4,6 +4,7 @@ const connectionRequestSchema = new mongoose.Schema(
   {
     fromUserId: {
       type: mongoose.Schema.Types.ObjectId,
+      ref: "User", // its somehow like joining two table in sql, in mongoose we can reference another model using ref and when we will populate this field then it will automatically fetch the details of the user from the User collection.
       required: true,
     },
     toUserId: {
